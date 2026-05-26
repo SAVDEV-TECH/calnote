@@ -4,8 +4,10 @@ import React, { useState } from 'react';
 import Calculator from '@/components/Calculator';
 import HistoryTimeline from '@/components/HistoryTimeline';
 import CaptionModal from '@/components/CaptionModal';
+import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { saveCalculation } from '@/lib/firestore';
 import { useAuth } from '@/lib/AuthContext';
+import { useOfflineStorage } from '@/hooks/useOfflineStorage';
 import { LayoutGrid, History as HistoryIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -15,6 +17,7 @@ export default function Home() {
   const [isCaptionOpen, setIsCaptionOpen] = useState(false);
   const [currentCalc, setCurrentCalc] = useState({ expression: '', result: '' });
   const { user, loading, login, signup, loginWithGoogle, logout } = useAuth();
+  const { isOnline, saveOfflineCalculation } = useOfflineStorage();
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [authEmail, setAuthEmail] = useState('');
@@ -69,13 +72,22 @@ export default function Home() {
   const handleFinalSave = async (caption: string, isVoice: boolean) => {
     if (!user) return;
     try {
-      await saveCalculation(user.uid, {
+      const calcData = {
         expression: currentCalc.expression,
         result: currentCalc.result,
         caption,
         created_at: new Date().toISOString(),
         is_voice_caption: isVoice
-      });
+      };
+
+      if (isOnline) {
+        // Save online to Firestore
+        await saveCalculation(user.uid, calcData);
+      } else {
+        // Save offline to localStorage
+        saveOfflineCalculation(calcData);
+      }
+
       setIsCaptionOpen(false);
       setActiveTab('history');
     } catch (error) {
@@ -86,6 +98,9 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-background text-foreground flex flex-col">
+      {/* Offline Indicator */}
+      <OfflineIndicator />
+
       {/* Top Navigation Tabs */}
       {!loading && user && (
         <nav className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-white/10" role="tablist" aria-label="Navigation">
