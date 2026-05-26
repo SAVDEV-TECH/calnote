@@ -37,23 +37,7 @@ const Calculator: React.FC<CalculatorProps> = ({ onSave }) => {
   };
 
   const handleKeyPress = (key: string) => {
-    // Play sound
-    playClickSound();
-
-    // Get button reference for particle effect
-    const buttonEl = buttonRefs.current[key];
-    if (buttonEl) {
-      const rect = buttonEl.getBoundingClientRect();
-      const x = rect.left + rect.width / 2;
-      const y = rect.top + rect.height / 2;
-
-      // Determine color based on button type
-      const isOperator = ['+', '-', '×', '÷', '(', ')', 'C', 'DEL'].includes(key);
-      const color = isOperator ? '#8b5cf6' : '#ffffff';
-
-      createParticles(x, y, key, color);
-    }
-
+    // Instant state update - no delay
     if (key === 'C') {
       setExpression('');
       setResult('');
@@ -64,6 +48,21 @@ const Calculator: React.FC<CalculatorProps> = ({ onSave }) => {
     } else {
       setExpression(prev => prev + key);
     }
+
+    // Audio and particles happen after state update (non-blocking)
+    requestAnimationFrame(() => {
+      playClickSound();
+      
+      const buttonEl = buttonRefs.current[key];
+      if (buttonEl) {
+        const rect = buttonEl.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        const isOperator = ['+', '-', '×', '÷', '(', ')', 'C', 'DEL'].includes(key);
+        const color = isOperator ? '#8b5cf6' : '#ffffff';
+        createParticles(x, y, key, color);
+      }
+    });
   };
 
   const calculate = () => {
@@ -132,6 +131,7 @@ const Calculator: React.FC<CalculatorProps> = ({ onSave }) => {
             key={expression}
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.05 }}
             className={cn(
               "font-medium tracking-tight mb-2 break-all",
               expression.length > 20 ? "text-lg" : "text-xl",
@@ -142,7 +142,8 @@ const Calculator: React.FC<CalculatorProps> = ({ onSave }) => {
           </motion.div>
         </AnimatePresence>
         <motion.div 
-          animate={{ scale: result ? 1.1 : 1 }}
+          animate={{ scale: result ? 1.05 : 1 }}
+          transition={{ duration: 0.05 }}
           className={cn(
             "font-bold tracking-tighter text-white break-all",
             result.length > 15 ? "text-3xl" : "text-5xl"
@@ -155,30 +156,24 @@ const Calculator: React.FC<CalculatorProps> = ({ onSave }) => {
       {/* Buttons Grid */}
       <div className="grid grid-cols-4 gap-3">
         {buttons.flat().map((btn) => (
-          <motion.button
+          <button
             key={btn}
             ref={el => { if (el) buttonRefs.current[btn] = el; }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
             onClick={() => handleKeyPress(btn)}
+            onTouchStart={(e) => (e.currentTarget).style.transform = 'scale(0.95)'}
+            onTouchEnd={(e) => (e.currentTarget).style.transform = 'scale(1)'}
+            onMouseDown={(e) => (e.currentTarget).style.transform = 'scale(0.95)'}
+            onMouseUp={(e) => (e.currentTarget).style.transform = 'scale(1)'}
+            onMouseLeave={(e) => (e.currentTarget).style.transform = 'scale(1)'}
             className={cn(
-              "h-16 rounded-2xl text-xl font-semibold flex items-center justify-center transition-colors shadow-sm relative overflow-hidden",
+              "h-16 rounded-2xl text-xl font-semibold flex items-center justify-center shadow-sm relative overflow-hidden active:opacity-80 transition-transform duration-75",
               btn === '=' ? "bg-primary text-white col-span-1" : 
               ['+', '-', '×', '÷', '(', ')', 'C', 'DEL'].includes(btn) ? "glass text-accent hover:bg-white/10" : 
               "glass text-white hover:bg-white/5"
             )}
           >
-            {/* Glow effect on click */}
-            <motion.div 
-              className="absolute inset-0 bg-accent/20 rounded-2xl"
-              initial={{ opacity: 0 }}
-              whileTap={{ opacity: 1 }}
-              transition={{ duration: 0.2 }}
-            />
-            <span className="relative z-10">
-              {btn === 'DEL' ? <Delete className="w-6 h-6" /> : btn}
-            </span>
-          </motion.button>
+            {btn === 'DEL' ? <Delete className="w-6 h-6" /> : btn}
+          </button>
         ))}
       </div>
 

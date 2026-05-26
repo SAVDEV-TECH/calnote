@@ -145,17 +145,17 @@ const HistoryTimeline = () => {
                   </div>
                 </div>
 
-                <div className="bg-black/20 rounded-2xl p-4 border border-white/5 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+                <div className="bg-black/20 rounded-2xl p-4 border border-white/5 flex items-center justify-between overflow-hidden">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
                       <CalcIcon className="w-5 h-5 text-accent" />
                     </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground font-mono">{item.expression}</div>
-                      <div className="text-xl font-bold text-white font-mono">= {item.result}</div>
+                    <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-accent/20 scrollbar-track-transparent">
+                      <div className="text-sm text-muted-foreground font-mono whitespace-nowrap">{item.expression}</div>
+                      <div className="text-xl font-bold text-white font-mono whitespace-nowrap">= {item.result}</div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     {item.is_voice_caption && (
                       <div className="bg-accent/20 p-2 rounded-full" title="Captured via voice">
                         <Mic className="w-4 h-4 text-accent" />
@@ -219,8 +219,10 @@ const HistoryTimeline = () => {
               <div className="bg-black/30 rounded-2xl p-6 border border-white/10 space-y-4">
                 <div className="space-y-2">
                   <p className="text-muted-foreground text-sm">Expression</p>
-                  <div className="text-2xl font-mono font-bold text-accent break-words">
-                    {selectedCalculation.expression}
+                  <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-accent/20 scrollbar-track-transparent">
+                    <div className="text-2xl font-mono font-bold text-accent whitespace-nowrap py-2">
+                      {selectedCalculation.expression}
+                    </div>
                   </div>
                 </div>
                 
@@ -228,8 +230,10 @@ const HistoryTimeline = () => {
                 
                 <div className="space-y-2">
                   <p className="text-muted-foreground text-sm">Result</p>
-                  <div className="text-3xl font-mono font-bold text-white">
-                    = {selectedCalculation.result}
+                  <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-accent/20 scrollbar-track-transparent">
+                    <div className="text-3xl font-mono font-bold text-white whitespace-nowrap py-2">
+                      = {selectedCalculation.result}
+                    </div>
                   </div>
                 </div>
               </div>
