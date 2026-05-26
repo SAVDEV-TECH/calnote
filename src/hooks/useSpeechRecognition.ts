@@ -11,6 +11,10 @@ export const useSpeechRecognition = () => {
       return;
     }
 
+    // ✅ Clear transcript and error before starting new session
+    setTranscript('');
+    setError(null);
+
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
 

@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { evaluate } from 'mathjs';
 import { Delete, Plus, Minus, X, Divide, Equal, History, Save, Mic, Trash2, Share2, Calculator as CalculatorIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAudioFeedback } from '@/hooks/useAudioFeedback';
+import Particle from './ParticleEffect';
 
 interface CalculatorProps {
   onSave: (expression: string, result: string) => void;
@@ -14,8 +16,44 @@ const Calculator: React.FC<CalculatorProps> = ({ onSave }) => {
   const [expression, setExpression] = useState('');
   const [result, setResult] = useState('');
   const [history, setHistory] = useState<string[]>([]);
+  const [particles, setParticles] = useState<Array<{ id: string; x: number; y: number; text: string; color: string }>>([]);
+  const { playClickSound } = useAudioFeedback();
+  const buttonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  const createParticles = (x: number, y: number, text: string, color: string) => {
+    const newParticles = Array.from({ length: 3 }, (_, i) => ({
+      id: `${Date.now()}-${i}`,
+      x,
+      y,
+      text,
+      color
+    }));
+    setParticles(prev => [...prev, ...newParticles]);
+
+    // Remove particles after animation
+    setTimeout(() => {
+      setParticles(prev => prev.filter(p => !newParticles.find(np => np.id === p.id)));
+    }, 600);
+  };
 
   const handleKeyPress = (key: string) => {
+    // Play sound
+    playClickSound();
+
+    // Get button reference for particle effect
+    const buttonEl = buttonRefs.current[key];
+    if (buttonEl) {
+      const rect = buttonEl.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+
+      // Determine color based on button type
+      const isOperator = ['+', '-', '×', '÷', '(', ')', 'C', 'DEL'].includes(key);
+      const color = isOperator ? '#8b5cf6' : '#ffffff';
+
+      createParticles(x, y, key, color);
+    }
+
     if (key === 'C') {
       setExpression('');
       setResult('');
@@ -33,6 +71,13 @@ const Calculator: React.FC<CalculatorProps> = ({ onSave }) => {
       if (!expression) return;
       const cleanExpression = expression.replace(/×/g, '*').replace(/÷/g, '/');
       const calculated = evaluate(cleanExpression);
+      
+      // Handle NaN and Infinity
+      if (!isFinite(calculated)) {
+        setResult('Math Error');
+        return;
+      }
+      
       const resultStr = String(calculated);
       setResult(resultStr);
       setHistory(prev => [expression + ' = ' + resultStr, ...prev.slice(0, 4)]);
@@ -67,7 +112,16 @@ const Calculator: React.FC<CalculatorProps> = ({ onSave }) => {
   ];
 
   return (
-    <div className="w-full max-w-md mx-auto p-4 flex flex-col gap-4">
+    <div className="w-full max-w-md mx-auto p-4 flex flex-col gap-4 relative">
+      {/* Particle Container */}
+      <div className="fixed inset-0 pointer-events-none">
+        <AnimatePresence>
+          {particles.map(particle => (
+            <Particle key={particle.id} {...particle} />
+          ))}
+        </AnimatePresence>
+      </div>
+
       {/* Display Area */}
       <div className="glass-dark rounded-3xl p-6 flex flex-col items-end justify-end min-h-[160px] shadow-2xl relative overflow-hidden">
         <div className="absolute top-4 left-4 opacity-20">
@@ -78,14 +132,21 @@ const Calculator: React.FC<CalculatorProps> = ({ onSave }) => {
             key={expression}
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-muted-foreground text-xl font-medium tracking-tight mb-2 break-all"
+            className={cn(
+              "font-medium tracking-tight mb-2 break-all",
+              expression.length > 20 ? "text-lg" : "text-xl",
+              "text-muted-foreground"
+            )}
           >
             {expression || '0'}
           </motion.div>
         </AnimatePresence>
         <motion.div 
           animate={{ scale: result ? 1.1 : 1 }}
-          className="text-5xl font-bold tracking-tighter text-white break-all"
+          className={cn(
+            "font-bold tracking-tighter text-white break-all",
+            result.length > 15 ? "text-3xl" : "text-5xl"
+          )}
         >
           {result || ' '}
         </motion.div>
@@ -96,17 +157,27 @@ const Calculator: React.FC<CalculatorProps> = ({ onSave }) => {
         {buttons.flat().map((btn) => (
           <motion.button
             key={btn}
+            ref={el => { if (el) buttonRefs.current[btn] = el; }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => handleKeyPress(btn)}
             className={cn(
-              "h-16 rounded-2xl text-xl font-semibold flex items-center justify-center transition-colors shadow-sm",
+              "h-16 rounded-2xl text-xl font-semibold flex items-center justify-center transition-colors shadow-sm relative overflow-hidden",
               btn === '=' ? "bg-primary text-white col-span-1" : 
-              ['+', '-', '×', '÷', '(', ')', 'C', 'DEL'].includes(btn) ? "glass text-accent" : 
+              ['+', '-', '×', '÷', '(', ')', 'C', 'DEL'].includes(btn) ? "glass text-accent hover:bg-white/10" : 
               "glass text-white hover:bg-white/5"
             )}
           >
-            {btn === 'DEL' ? <Delete className="w-6 h-6" /> : btn}
+            {/* Glow effect on click */}
+            <motion.div 
+              className="absolute inset-0 bg-accent/20 rounded-2xl"
+              initial={{ opacity: 0 }}
+              whileTap={{ opacity: 1 }}
+              transition={{ duration: 0.2 }}
+            />
+            <span className="relative z-10">
+              {btn === 'DEL' ? <Delete className="w-6 h-6" /> : btn}
+            </span>
           </motion.button>
         ))}
       </div>

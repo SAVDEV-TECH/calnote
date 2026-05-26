@@ -18,13 +18,23 @@ const CaptionModal: React.FC<CaptionModalProps> = ({ isOpen, onClose, onSave, ex
   const [caption, setCaption] = useState('');
   const { isListening, transcript, error, startListening } = useSpeechRecognition();
   const [isVoiceUsed, setIsVoiceUsed] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   useEffect(() => {
     if (transcript) {
       setCaption(prev => prev + (prev ? ' ' : '') + transcript);
       setIsVoiceUsed(true);
+      setModalError(null); // ✅ Clear error on success
     }
   }, [transcript]);
+
+  const handleTextChange = (value: string) => {
+    setCaption(value);
+    // ✅ Clear error when user types
+    if (value.length > 0) {
+      setModalError(null);
+    }
+  };
 
   const handleSave = () => {
     onSave(caption, isVoiceUsed);
@@ -60,7 +70,7 @@ const CaptionModal: React.FC<CaptionModalProps> = ({ isOpen, onClose, onSave, ex
               autoFocus
               placeholder="What is this calculation for?"
               value={caption}
-              onChange={(e) => setCaption(e.target.value)}
+              onChange={(e) => handleTextChange(e.target.value)}
               className="w-full bg-black/20 border border-white/10 rounded-2xl p-4 min-h-[120px] text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all resize-none"
             />
             {error && (
